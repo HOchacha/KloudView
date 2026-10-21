@@ -336,16 +336,20 @@ func (s *Memory) ListResources() []domain.Resource {
 	for _, item := range s.resources {
 		items = append(items, item)
 	}
-	sort.Slice(items, func(i, j int) bool {
-		if ri, rj := resourceTypeRank(items[i].Type), resourceTypeRank(items[j].Type); ri != rj {
-			return ri < rj
-		}
-		if items[i].Name == items[j].Name {
-			return items[i].ID < items[j].ID
-		}
-		return items[i].Name < items[j].Name
-	})
+	sort.Slice(items, func(i, j int) bool { return ResourceBefore(items[i], items[j]) })
 	return items
+}
+
+// ResourceBefore is the order ListResources returns: by type rank, then name,
+// then ID. A cursor into that listing has to compare by the same three.
+func ResourceBefore(a, b domain.Resource) bool {
+	if ra, rb := resourceTypeRank(a.Type), resourceTypeRank(b.Type); ra != rb {
+		return ra < rb
+	}
+	if a.Name == b.Name {
+		return a.ID < b.ID
+	}
+	return a.Name < b.Name
 }
 
 // resourceTypeRank orders resources from most to least operationally significant
