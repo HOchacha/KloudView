@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"sync"
@@ -325,6 +326,9 @@ func (s *Memory) ListLiveResources() []domain.Resource {
 	return live
 }
 
+// ListResources shares each resource's maps with the store, since copying them
+// for every resource on every listing is the cost of the fleet's size. Read
+// them; to change one, take it from Resource, which returns maps of its own.
 func (s *Memory) ListResources() []domain.Resource {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -370,10 +374,15 @@ func (s *Memory) HasResource(id string) bool {
 	return ok
 }
 
+// Resource returns a copy the caller may change and write back: its maps are
+// its own. The stored maps are read without the lock by every listing, so a
+// change made to them in place is a concurrent map write.
 func (s *Memory) Resource(id string) (domain.Resource, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	resource, ok := s.resources[id]
+	resource.Attributes = maps.Clone(resource.Attributes)
+	resource.Tags = maps.Clone(resource.Tags)
 	return resource, ok
 }
 
