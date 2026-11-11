@@ -156,7 +156,7 @@ A rule is evaluated for a resource inside `scopePath` that carries every `select
 
 Neither field can widen a rule, so creating or editing one requires the same access to `scopePath` and `selector` as before.
 
-`/api/v1/alert-silences` suppresses alerts based on a time window of up to 30 days, a hierarchical scope, and a tag selector. When an active window is created, existing matching alerts transition to `silenced`, and new matching alerts are not created within the window.
+`/api/v1/alert-silences` suppresses alerts based on a time window of up to 30 days, a hierarchical scope, and a tag selector. When a window opens -- at creation, or at its start time for one scheduled ahead (checked every 15 seconds) -- open matching alerts transition to `silenced`, and new matching alerts are not created within the window. When it ends or is deleted, the next sample for each silenced rule alert resolves it if the condition cleared, or returns the same alert to `firing` and notifies again if it did not; a silenced offline-agent alert returns to `firing` while its agent is still away.
 
 An Incident must include at least one resource or an existing alert. The resources of linked alerts are automatically merged into the Incident's `resourceIds`, and creation, modification, status changes, and timeline queries are validated against the actual scope of those targets. The supported states are `declared`, `investigating`, `mitigating`, `monitoring`, and `resolved`.
 
