@@ -964,6 +964,10 @@ export const ko = {
   "Hosts that have not started are canceled. Hosts already running finish what they were given.":
     "시작하지 않은 호스트는 취소됩니다. 이미 실행 중인 호스트는 받은 작업을 끝냅니다.",
   "Failed host": "실패한 호스트",
+  "tag key=value": "태그 key=value",
+  "Exact tag match": "태그 정확히 일치",
+  "Tag filter": "태그 필터",
+  "Use key=value, for example env=prod": "key=value 형식으로 입력하세요. 예: env=prod",
   "Remove this agent's record": "이 에이전트의 기록 삭제",
   "ONE-LINE REMOVAL": "한 줄 제거",
   "Run this on the host you are removing. It stops and removes the service, its configuration, its identity and the account it runs as.":
@@ -1642,6 +1646,7 @@ const patterns = [
   [/^Every connected node \((\d+)\)$/, (m) => `연결된 모든 노드 (${m[1]})`],
   [/^(\d+) succeeded · (\d+) failed · (\d+) running · (\d+) queued · (\d+) canceled · (\d+) hosts$/, (m) => `성공 ${m[1]} · 실패 ${m[2]} · 실행 중 ${m[3]} · 대기 ${m[4]} · 취소 ${m[5]} · 전체 ${m[6]}대`],
   [/^(\d+) at a time · stop after (\d+) failures · by (.+)$/, (m) => `동시 ${m[1]}대 · 실패 ${m[2]}건 초과 시 중단 · 요청자 ${m[3]}`],
+  [/^(\d+) (resources|groups) exported\.$/, (m) => `${m[2] === "groups" ? "그룹" : "리소스"} ${m[1]}개를 내보냈습니다.`],
   [
     /^No agent can take (.+)$/,
     (m) => `${m[1]}을 받을 수 있는 에이전트가 없습니다`,

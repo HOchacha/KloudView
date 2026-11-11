@@ -15,6 +15,8 @@ import {
   chunked,
   settleEach,
   batchProgress,
+  nextResourceSort,
+  toCSV,
   chartMarks,
   escapeHTML,
   failureCard,
@@ -311,4 +313,18 @@ test("batchProgress counts each target state and the share that is done", () => 
   });
   assert.deepEqual(progress, { queued: 1, inFlight: 2, succeeded: 1, failed: 1, canceled: 1, total: 6, percent: 50 });
   assert.equal(batchProgress({}).percent, 0);
+});
+
+test("toCSV quotes cells and defuses formulas", () => {
+  assert.equal(
+    toCSV(["a", "b"], [{ a: '=1+1', b: 'say "hi"' }, { a: "x" }]),
+    'a,b\n"\'=1+1","say ""hi"""\n"x",""',
+  );
+});
+
+test("nextResourceSort cycles natural, flipped, default", () => {
+  assert.deepEqual(nextResourceSort("", "", "cpu"), { sort: "cpu", order: "desc" });
+  assert.deepEqual(nextResourceSort("cpu", "desc", "cpu"), { sort: "cpu", order: "asc" });
+  assert.deepEqual(nextResourceSort("cpu", "asc", "cpu"), { sort: "", order: "" });
+  assert.deepEqual(nextResourceSort("cpu", "desc", "name"), { sort: "name", order: "asc" });
 });

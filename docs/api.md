@@ -68,10 +68,13 @@ Scope and Role binding management APIs also evaluate the actual scope paths spec
 | `type` | none | `node`, `hypervisor`, `vm`, `container`, `process` |
 | `excludeTypes` | none | Comma-separated types to leave out, such as `process` |
 | `health` | none | `healthy`, `warning`, `critical`, `unknown` |
+| `tag` | none | Exact `key=value`; repeat to require several |
+| `sort` | store order | `name`, `updated`, `cpu`, `memory`, or `disk`; resources without a reading sort last |
+| `order` | `asc` for name, `desc` otherwise | `asc` or `desc` |
 | `limit` | 200 | Up to 1000 |
 | `offset` | 0 | Starting position |
 
-Pass the `nextCursor` from the previous response as `cursor`. When a cursor is present it takes precedence over offset and resumes after the composite type, name, and ID sort key. Offset pagination remains available. The alert list also supports `q`, `status`, `severity`, `limit`, and `cursor`.
+Pass the `nextCursor` from the previous response as `cursor`. When a cursor is present it takes precedence over offset and resumes after the composite type, name, and ID sort key. Offset pagination remains available. Cursors follow the default order only; with any `sort`, page by `offset` (no `nextCursor` is returned, and a `cursor` is refused). The response also carries `metrics`, the latest `cpu`, `memory`, and `disk` of each resource on the page that has a reading. The alert list also supports `q`, `status`, `severity`, `limit`, and `cursor`.
 
 The `nextOffset` field is provided only when a next page exists. Agent-owned resources take only `alias` and `tags` on update, and cannot be deleted directly. `alias` is the name the console shows in place of `name`; the agent rewrites `name` with every inventory but never the alias or tags, and search matches either. Removing such a node and its auto-discovered child resources is done through the agent deletion API. Deleting an unmanaged resource also deletes its relationships, group memberships, and metrics.
 

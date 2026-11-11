@@ -420,3 +420,26 @@ export function batchProgress(batch) {
   const finished = counts.succeeded + counts.failed + counts.canceled;
   return { ...counts, total, percent: total ? Math.round((finished / total) * 100) : 0 };
 }
+
+// Rows as CSV. A cell a spreadsheet would run as a formula is prefixed so it
+// stays text: an exported hostname or tag is data somebody else typed.
+export function toCSV(columns, rows) {
+  const quote = (value) => {
+    const text = String(value ?? "");
+    const inert = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+    return `"${inert.replaceAll('"', '""')}"`;
+  };
+  return [columns.join(",")]
+    .concat(rows.map((row) => columns.map((column) => quote(row[column])).join(",")))
+    .join("\n");
+}
+
+// The next sort a column header asks for: a new column starts in its natural
+// direction (name A to Z, a metric largest first), the same column flips, and
+// a third press goes back to the default order.
+export function nextResourceSort(current, order, field) {
+  const natural = field === "name" ? "asc" : "desc";
+  if (current !== field) return { sort: field, order: natural };
+  if ((order || natural) === natural) return { sort: field, order: natural === "asc" ? "desc" : "asc" };
+  return { sort: "", order: "" };
+}
