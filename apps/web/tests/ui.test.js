@@ -21,6 +21,8 @@ import {
   escapeHTML,
   failureCard,
   formatBytes,
+  rateScale,
+  tickNumber,
   heatmapTier,
   incidentTitleFor,
   keyValues,
@@ -327,4 +329,27 @@ test("nextResourceSort cycles natural, flipped, default", () => {
   assert.deepEqual(nextResourceSort("cpu", "desc", "cpu"), { sort: "cpu", order: "asc" });
   assert.deepEqual(nextResourceSort("cpu", "asc", "cpu"), { sort: "", order: "" });
   assert.deepEqual(nextResourceSort("cpu", "desc", "name"), { sort: "name", order: "asc" });
+});
+
+test("rateScale rounds the ceiling to four even steps in one unit", () => {
+  const MB = 1024 ** 2;
+  const GB = 1024 ** 3;
+  const scale = rateScale(450.9 * MB);
+  assert.equal(scale.unit, "MB/s");
+  assert.equal(scale.top / scale.divisor, 500);
+  assert.equal(rateScale(300 * MB).top / MB, 400);
+  // Just under a unit boundary moves up a unit rather than doubling.
+  const near = rateScale(1020 * MB);
+  assert.equal(near.unit, "GB/s");
+  assert.equal(near.top, GB);
+  // An idle link still gets a scale.
+  assert.deepEqual(rateScale(0), { top: 4, divisor: 1, unit: "B/s" });
+  assert.equal(rateScale(3 * 1024).top, 4 * 1024);
+});
+
+test("tickNumber drops trailing noise", () => {
+  assert.equal(tickNumber(125), "125");
+  assert.equal(tickNumber(37.5), "37.5");
+  assert.equal(tickNumber(0.25), "0.25");
+  assert.equal(tickNumber(1 / 3), "0.33");
 });
