@@ -73,7 +73,7 @@ Scope and Role binding management APIs also evaluate the actual scope paths spec
 
 Pass the `nextCursor` from the previous response as `cursor`. When a cursor is present it takes precedence over offset and resumes after the composite type, name, and ID sort key. Offset pagination remains available. The alert list also supports `q`, `status`, `severity`, `limit`, and `cursor`.
 
-The `nextOffset` field is provided only when a next page exists. Agent-owned resources allow metadata edits only and cannot be deleted directly. Removing such a node and its auto-discovered child resources is done through the agent deletion API. Deleting an unmanaged resource also deletes its relationships, group memberships, and metrics.
+The `nextOffset` field is provided only when a next page exists. Agent-owned resources take only `alias` and `tags` on update, and cannot be deleted directly. `alias` is the name the console shows in place of `name`; the agent rewrites `name` with every inventory but never the alias or tags, and search matches either. Removing such a node and its auto-discovered child resources is done through the agent deletion API. Deleting an unmanaged resource also deletes its relationships, group memberships, and metrics.
 
 `GET /api/v1/resources/{id}` lazily fetches targets already included in list pages and the heatmap. The server verifies the effective health reflecting the actual target scope and alerts before returning the details, so the Web Console does not need to keep the entire fleet list for the detail view.
 

@@ -2430,7 +2430,7 @@ async function applyLocation() {
   }
   if (section === "resources" && id) {
     try {
-      const resource = await api(`/api/v1/resources/${encodeURIComponent(id)}`);
+      const resource = aliased(await api(`/api/v1/resources/${encodeURIComponent(id)}`));
       state.selectedResourceId = id;
       state.selectedResource = resource;
       state.detailTab = tab || "overview";
@@ -3027,24 +3027,28 @@ function toast(title, detail) {
 }
 function resourceFields(resource = {}) {
   let types = ["node", "hypervisor", "vm", "container", "process"],
-    health = ["healthy", "warning", "critical", "unknown", "maintenance"];
-  return `<div class="form-row"><label>NAME</label><input id="resource-name" value="${escapeHTML(resource.name || "")}" placeholder="e.g. legacy-node-01"></div><div class="form-row"><label>TYPE</label><select id="resource-type">${types.map((value) => `<option value="${value}" ${resource.type === value ? "selected" : ""}>${value}</option>`).join("")}</select></div><div class="form-row"><label>HEALTH</label><select id="resource-health">${health.map((value) => `<option value="${value}" ${resource.health === value ? "selected" : ""}>${value}</option>`).join("")}</select></div><div class="form-row"><label>TAGS</label><input id="resource-tags" value="${Object.entries(
+    health = ["healthy", "warning", "critical", "unknown", "maintenance"],
+    // An agent describes its own resources; the alias and tags are all an
+    // operator sets on them.
+    locked = resource.agentId ? "disabled" : "";
+  return `<div class="form-row"><label>NAME</label><input id="resource-name" value="${escapeHTML(resource.reportedName || resource.name || "")}" placeholder="e.g. legacy-node-01" ${locked}></div><div class="form-row"><label>ALIAS</label><input id="resource-alias" value="${escapeHTML(resource.alias || "")}" placeholder="e.g. Billing DB"><div class="field-hint">Shown in place of the name across the console. Agents never change it; leave empty to show the name.</div></div><div class="form-row"><label>TYPE</label><select id="resource-type" ${locked}>${types.map((value) => `<option value="${value}" ${resource.type === value ? "selected" : ""}>${value}</option>`).join("")}</select></div><div class="form-row"><label>HEALTH</label><select id="resource-health" ${locked}>${health.map((value) => `<option value="${value}" ${resource.health === value ? "selected" : ""}>${value}</option>`).join("")}</select></div><div class="form-row"><label>TAGS</label><input id="resource-tags" value="${Object.entries(
     resource.tags || {},
   )
     .map(([key, value]) => `${key}=${value}`)
     .join(
       ", ",
-    )}" placeholder="environment=production, owner=platform"></div><div class="form-row"><label>ATTRIBUTES</label><input id="resource-attributes" value="${Object.entries(
+    )}" placeholder="environment=production, owner=platform"></div><div class="form-row"><label>ATTRIBUTES</label><input id="resource-attributes" ${locked} value="${Object.entries(
     resource.attributes || {},
   )
     .map(([key, value]) => `${key}=${value}`)
     .join(
       ", ",
-    )}" placeholder="ip=10.0.0.10, os=linux"></div>${resource.agentId ? '<div class="warning-box">Agent ownership and identity cannot be changed manually.</div>' : ""}`;
+    )}" placeholder="ip=10.0.0.10, os=linux"></div>${resource.agentId ? '<div class="warning-box">This resource is described by its agent. Only the alias and tags can be changed here.</div>' : ""}`;
 }
 function resourcePayload() {
   return {
     name: $("#resource-name").value,
+    alias: $("#resource-alias").value.trim(),
     type: $("#resource-type").value,
     health: $("#resource-health").value,
     tags: keyValues($("#resource-tags").value),
@@ -3484,6 +3488,17 @@ function lookups() {
   return lookup;
 }
 
+// A resource is drawn under its alias when it has one. The reported name stays
+// beside it, for the line under the name and for the edit form.
+function aliased(resource) {
+  return resource?.alias
+    ? { ...resource, name: resource.alias, reportedName: resource.name }
+    : resource;
+}
+function aliasedItems(result) {
+  return { ...result, items: (result?.items || []).map(aliased) };
+}
+
 function findResource(id) {
   return (
     lookups().byId.get(id) ||
@@ -3502,7 +3517,7 @@ function allResources() {
 // The whole fleet, processes fetched now if they are not already loaded.
 async function everyResource() {
   const processes = await apiCollection("/api/v1/resources?type=process", 1000)
-    .then((result) => result.items || [])
+    .then((result) => aliasedItems(result).items)
     .catch(() => state.liveProcesses);
   return state.liveResources.concat(processes);
 }
@@ -3550,6 +3565,12 @@ function addressOf(resource) {
 // workload by the host and the pid or container id it holds there.
 function resourceIdentity(resource) {
   if (!resource) return "";
+  // Under an alias, the name the agent reports is what tells the row apart.
+  const identity = machineIdentity(resource);
+  return resource.reportedName ? `${resource.reportedName} · ${identity}` : identity;
+}
+
+function machineIdentity(resource) {
   const attributes = resource.attributes || {};
   if (["node", "hypervisor"].includes(resource.type))
     return attributes.address || attributes.hostname || resource.id;
@@ -4073,7 +4094,7 @@ async function action(a, el) {
     // moments ago is exactly what someone is here to attach.
     let known = state.liveResources;
     try {
-      known = (await api("/api/v1/resources?limit=1000")).items || known;
+      known = aliasedItems(await api("/api/v1/resources?limit=1000")).items;
     } catch {}
     const attached = new Set(
       state.liveRelations
@@ -4156,10 +4177,13 @@ async function action(a, el) {
       "Save",
       false,
       async () => {
-        await api("/api/v1/resources/" + resource.id, {
+        const updated = await api("/api/v1/resources/" + resource.id, {
           method: "PUT",
           body: JSON.stringify(resourcePayload()),
         });
+        // The open detail page holds its own copy.
+        if (state.selectedResource?.id === resource.id)
+          state.selectedResource = aliased(updated);
         await hydrate();
       },
       { help: "resource" },
@@ -5865,8 +5889,8 @@ function bind() {
         event.stopPropagation();
         try {
           const id = b.dataset.liveResource;
-          const resource = await api(
-            "/api/v1/resources/" + encodeURIComponent(id),
+          const resource = aliased(
+            await api("/api/v1/resources/" + encodeURIComponent(id)),
           );
           state.resourceMetrics = [];
           navTo(() => {
@@ -6800,7 +6824,7 @@ async function loadResources(query = "", silent = false) {
       parameters.set("lifecycle", state.resourceLifecycle);
     parameters.set("limit", state.resourcePageSize);
     parameters.set("offset", state.resourceOffset);
-    let result = await api("/api/v1/resources?" + parameters.toString());
+    let result = aliasedItems(await api("/api/v1/resources?" + parameters.toString()));
     state.liveFilteredResources = result.items || [];
     state.liveResourceTotal = result.total ?? state.liveFilteredResources.length;
     if (!silent) render();
@@ -6908,7 +6932,7 @@ function wantProcesses() {
   if (processesLoading || Date.now() - state.liveProcessesAt < 60000) return;
   processesLoading = apiCollection("/api/v1/resources?type=process", 1000)
     .then((result) => {
-      state.liveProcesses = result.items || [];
+      state.liveProcesses = aliasedItems(result).items;
       render();
     })
     .catch(() => {})
@@ -7017,7 +7041,7 @@ async function refresh() {
     state.liveAgents = agents.items || [];
     state.liveRollout = rollout || null;
     state.liveInventories = inventories.items || [];
-    state.liveResources = resources.items || [];
+    state.liveResources = aliasedItems(resources).items;
     // Re-apply the active filter and page so auto-refresh preserves them.
     await loadResources(state.query, true);
     state.liveGroups = serverGroups.items || [];

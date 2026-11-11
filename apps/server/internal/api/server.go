@@ -487,14 +487,19 @@ func (s *Server) reconcileInventory(inventory domain.AgentInventory) {
 			// Inventory runs on a slower cycle than cgroup readings, so keys
 			// the metric path owns are carried over instead of being erased
 			// every five minutes.
+			// What operators set -- alias and tags -- is theirs, not the
+			// inventory's, and survives it.
+			var alias string
+			var tags map[string]string
 			if previous, found := s.store.Resource(resourceID); found {
 				for _, key := range metricOwnedAttributes {
 					if value, ok := previous.Attributes[key]; ok {
 						attributes[key] = value
 					}
 				}
+				alias, tags = previous.Alias, previous.Tags
 			}
-			s.store.UpsertResource(domain.Resource{ID: resourceID, Name: name, Type: kind.resourceType, Health: inventoryHealth(item), AgentID: inventory.AgentID, Attributes: attributes, LastSeenAt: observed})
+			s.store.UpsertResource(domain.Resource{ID: resourceID, Name: name, Alias: alias, Type: kind.resourceType, Health: inventoryHealth(item), AgentID: inventory.AgentID, Attributes: attributes, Tags: tags, LastSeenAt: observed})
 			s.store.PutRelation(domain.Relation{ID: stableID("relation", inventory.NodeID+"-"+kind.relationType+"-"+resourceID), SourceID: inventory.NodeID, TargetID: resourceID, Type: kind.relationType})
 		}
 	}
@@ -683,7 +688,7 @@ func (s *Server) listResources(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		resource.Health, _ = effectiveResourceHealth(resource, alertHealth, onlineAgents)
-		searchable := strings.ToLower(resource.Name + " " + resource.ID + " " + string(resource.Type))
+		searchable := strings.ToLower(resource.Name + " " + resource.Alias + " " + resource.ID + " " + string(resource.Type))
 		for key, value := range resource.Tags {
 			searchable += " " + strings.ToLower(key+"="+value+" "+key+" "+value)
 		}
@@ -820,6 +825,12 @@ func (s *Server) updateResource(w http.ResponseWriter, r *http.Request) {
 	}
 	resource.ID = current.ID
 	resource.AgentID = current.AgentID
+	// An agent's resource is described by its agent; only the alias and the
+	// tags are the operator's to set.
+	if current.AgentID != "" {
+		current.Alias, current.Tags = resource.Alias, resource.Tags
+		resource = current
+	}
 	writeJSON(w, http.StatusOK, s.store.UpsertResource(resource))
 }
 
@@ -967,7 +978,7 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 		included = included && (len(selectedTypes) == 0 || selectedTypes[string(resource.Type)])
 		included = included && (selectedHealth == "" || string(resourceHealth) == selectedHealth)
 		included = included && (!anomaliesOnly || (resourceHealth != domain.HealthHealthy && resourceHealth != domain.HealthMaintenance))
-		cell := overviewCell{ID: resource.ID, Name: resource.Name, Type: resource.Type, Health: resourceHealth, GroupID: groupID, CPU: metric.CPU, Memory: metric.Memory, Disk: metric.Disk, Network: network.Rx + network.Tx, NetworkRx: network.Rx, NetworkTx: network.Tx, Stale: metricsStale}
+		cell := overviewCell{ID: resource.ID, Name: resource.DisplayName(), Type: resource.Type, Health: resourceHealth, GroupID: groupID, CPU: metric.CPU, Memory: metric.Memory, Disk: metric.Disk, Network: network.Rx + network.Tx, NetworkRx: network.Rx, NetworkTx: network.Tx, Stale: metricsStale}
 		if resourceHealth != domain.HealthHealthy && resourceHealth != domain.HealthMaintenance {
 			attention = append(attention, cell)
 		}
