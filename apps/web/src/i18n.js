@@ -981,6 +981,16 @@ export const ko = {
   "No agents match these filters": "조건에 맞는 에이전트 없음",
   "Filter by host, version or label…": "호스트, 버전, 라벨로 필터…",
   never: "기록 없음",
+  "Maintenance…": "유지보수…",
+  "End maintenance": "유지보수 종료",
+  "Enter maintenance": "유지보수 시작",
+  "Start maintenance": "유지보수 시작",
+  "Silence…": "Silence…",
+  "Silence alert": "알림 Silence",
+  "8 hours": "8시간",
+  "24 hours": "24시간",
+  "Alerts on the covered resources are silenced and they show as in maintenance until the window ends.":
+    "대상 리소스의 알림이 silence되고, 기간이 끝날 때까지 유지보수 중으로 표시됩니다.",
   "Server API is unavailable": "서버 API 사용 불가",
   "Host inventory": "호스트 인벤토리",
   "Latest hardware, operating system, runtime, VM, container, and process reports":
@@ -1578,6 +1588,10 @@ function translateAlertSummary(text) {
 const patterns = [
   [/^(\d+)([smhd]) ago$/, (m) => `${m[1]}${{ s: "초", m: "분", h: "시간", d: "일" }[m[2]]} 전`],
   [/^(All|Online|Offline|Silent 1h\+|Silent 1d\+) (\d+)$/, (m) => `${{ All: "전체", Online: "온라인", Offline: "오프라인", "Silent 1h+": "1시간+ 무응답", "Silent 1d+": "1일+ 무응답" }[m[1]]} ${m[2]}`],
+  [/^Include (\d+) workloads on this host$/, (m) => `이 호스트의 워크로드 ${m[1]}개 포함`],
+  [/^Ends the window naming this resource now\. Its alert rules resume evaluation\.$/, () => "이 리소스를 지정한 유지보수 기간을 지금 종료합니다. 알림 규칙 평가가 다시 시작됩니다."],
+  [/^Ends (\d+) windows naming this resource now\. Its alert rules resume evaluation\.$/, (m) => `이 리소스를 지정한 유지보수 기간 ${m[1]}개를 지금 종료합니다. 알림 규칙 평가가 다시 시작됩니다.`],
+  [/^(.+) \+ (\d+) more$/, (m) => `${m[1]} 외 ${m[2]}개`],
   [
     /^No agent can take (.+)$/,
     (m) => `${m[1]}을 받을 수 있는 에이전트가 없습니다`,

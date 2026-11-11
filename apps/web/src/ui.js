@@ -346,3 +346,23 @@ export function agentMatches(agent, filter = {}, now = Date.now()) {
   }
   return true;
 }
+
+// The silences that put a resource into maintenance by name and are in force
+// now: the ones "End maintenance" closes. A scope- or tag-wide window also
+// quiets the host, but ending it would end it for every other host it covers.
+export function maintenanceWindows(silences, resourceId, now = Date.now()) {
+  return (silences || []).filter(
+    (silence) =>
+      (silence.resourceIds || []).includes(resourceId) &&
+      Date.parse(silence.startsAt) <= now &&
+      now < Date.parse(silence.endsAt),
+  );
+}
+
+// The window a maintenance or quick silence opens: from now for `hours`.
+export function windowFrom(now, hours) {
+  return {
+    startsAt: new Date(now).toISOString(),
+    endsAt: new Date(now + hours * 3600 * 1000).toISOString(),
+  };
+}
