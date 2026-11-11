@@ -14,6 +14,7 @@ import {
   bulkOutcome,
   chunked,
   settleEach,
+  batchProgress,
   chartMarks,
   escapeHTML,
   failureCard,
@@ -299,4 +300,15 @@ test("chunked and bulkOutcome", () => {
   assert.deepEqual(chunked([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
   assert.equal(bulkOutcome(3, []), "3 updated");
   assert.equal(bulkOutcome(2, [{ id: "x", error: "resource scope is not assigned" }]), "2 updated, 1 failed: resource scope is not assigned");
+});
+
+test("batchProgress counts each target state and the share that is done", () => {
+  const progress = batchProgress({
+    targets: [
+      { status: "succeeded" }, { status: "failed" }, { status: "running" },
+      { status: "pending" }, { status: "queued" }, { status: "canceled" },
+    ],
+  });
+  assert.deepEqual(progress, { queued: 1, inFlight: 2, succeeded: 1, failed: 1, canceled: 1, total: 6, percent: 50 });
+  assert.equal(batchProgress({}).percent, 0);
 });

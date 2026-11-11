@@ -34,6 +34,9 @@ func (s *Server) WatchConnectivity(ctx context.Context) {
 			now := time.Now().UTC()
 			s.sweepConnectivity(now)
 			s.sweepAlertSilences(now)
+			// The same clock moves batches past targets that finished
+			// without a completion, such as a lease that ran out.
+			s.store.AdvanceBatches()
 		}
 	}
 }

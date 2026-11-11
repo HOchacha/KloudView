@@ -115,6 +115,7 @@ export const state = {
   liveScopes: [],
   liveBindings: [],
   liveOperations: [],
+  liveBatches: [],
   liveAlertRules: [],
   liveAlertSilences: [],
   liveAlertInhibitions: [],
