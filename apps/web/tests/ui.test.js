@@ -11,6 +11,9 @@ import {
   tagConditionLabels,
   maintenanceWindows,
   windowFrom,
+  bulkOutcome,
+  chunked,
+  settleEach,
   chartMarks,
   escapeHTML,
   failureCard,
@@ -281,4 +284,19 @@ test("maintenanceWindows lists only active windows that name the resource", () =
   ];
   assert.deepEqual(maintenanceWindows(silences, "node-1", now).map((s) => s.id), ["named"]);
   assert.deepEqual(windowFrom(now, 4), { startsAt: "2026-11-11T12:00:00.000Z", endsAt: "2026-11-11T16:00:00.000Z" });
+});
+
+test("settleEach counts 404 as done and keeps other refusals", async () => {
+  const result = await settleEach(["a", "b", "c"], async (id) => {
+    if (id === "b") throw Object.assign(new Error("gone"), { status: 404 });
+    if (id === "c") throw Object.assign(new Error("denied"), { status: 403 });
+  }, 2);
+  assert.deepEqual(result.done.sort(), ["a", "b"]);
+  assert.equal(result.failed[0].id, "c");
+});
+
+test("chunked and bulkOutcome", () => {
+  assert.deepEqual(chunked([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+  assert.equal(bulkOutcome(3, []), "3 updated");
+  assert.equal(bulkOutcome(2, [{ id: "x", error: "resource scope is not assigned" }]), "2 updated, 1 failed: resource scope is not assigned");
 });
