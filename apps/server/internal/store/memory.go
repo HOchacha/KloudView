@@ -343,7 +343,7 @@ func (s *Memory) ListResources() []domain.Resource {
 // ResourceBefore is the order ListResources returns: by type rank, then name,
 // then ID. A cursor into that listing has to compare by the same three.
 func ResourceBefore(a, b domain.Resource) bool {
-	if ra, rb := resourceTypeRank(a.Type), resourceTypeRank(b.Type); ra != rb {
+	if ra, rb := ResourceTypeRank(a.Type), ResourceTypeRank(b.Type); ra != rb {
 		return ra < rb
 	}
 	if a.Name == b.Name {
@@ -352,9 +352,9 @@ func ResourceBefore(a, b domain.Resource) bool {
 	return a.Name < b.Name
 }
 
-// resourceTypeRank orders resources from most to least operationally significant
+// ResourceTypeRank orders resources from most to least operationally significant
 // so hosts and hypervisors surface ahead of the many discovered processes.
-func resourceTypeRank(t domain.ResourceType) int {
+func ResourceTypeRank(t domain.ResourceType) int {
 	switch t {
 	case domain.ResourceNode:
 		return 0
